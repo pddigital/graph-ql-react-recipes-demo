@@ -29,6 +29,8 @@ mongoose
 
 const app = express();
 
+app.use(bodyParser.json());
+
 app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 app.use(
   "/graphql",
