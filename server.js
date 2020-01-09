@@ -4,11 +4,13 @@ require("dotenv").config({ path: "variables.env" });
 const bodyParser = require("body-parser");
 const Recipe = require("./models/Recipe");
 const User = require("./models/User");
+const jwt = require("jsonwebtoken");
 
 const { graphiqlExpress, graphqlExpress } = require("apollo-server-express");
 const { makeExecutableSchema } = require("graphql-tools");
 const { typeDefs } = require("./schema");
 const { resolvers } = require("./resolvers");
+const cors = require("cors");
 
 const schema = makeExecutableSchema({
   typeDefs: typeDefs,
@@ -31,16 +33,36 @@ const app = express();
 
 app.use(bodyParser.json());
 
+const corsOptions = {
+  origin: "http://localhost:3000",
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+app.use(async (req, res, next) => {
+  const token = req.headers["authorization"];
+  if (token !== "null") {
+    try {
+      const currentUser = await jwt.verify(token, process.env.SECRET);
+      req.currentUser = currentUser;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  next();
+});
+
 app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 app.use(
   "/graphql",
-  graphqlExpress({
+  graphqlExpress(({ currentUser }) => ({
     schema,
     context: {
       Recipe,
-      User
+      User,
+      currentUser
     }
-  })
+  }))
 );
 
 const PORT = process.env.PORT || 4444;
